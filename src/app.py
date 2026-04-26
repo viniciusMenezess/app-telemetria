@@ -4,6 +4,7 @@ import random
 import requests
 from fastapi import FastAPI, Response, status, Request
 from typing import List
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 # ================================
 #  CONFIGURAÇÃO DA APLICAÇÃO
@@ -21,6 +22,10 @@ app = FastAPI()
 @app.get("/")
 def read_root():
     return {"message": f"Esse é o serviço {APP_NAME}"}
+
+@app.get("/metrics")
+def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 @app.post("/process")
 def process_request(payload: List[str], response: Response, request: Request):
