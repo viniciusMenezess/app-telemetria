@@ -11,3 +11,9 @@ prometheus_reader = PrometheusMetricReader()
 metrics.set_meter_provider(MeterProvider(metric_readers=[prometheus_reader]))
 
 meter = metrics.get_meter(APP_NAME)
+
+request_counter = meter.create_counter(
+    name = "app_requests_total",
+    description = "Total de requisições processadas",
+    unit = "1"
+)

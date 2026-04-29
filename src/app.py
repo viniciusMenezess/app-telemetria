@@ -5,6 +5,7 @@ import requests
 from fastapi import FastAPI, Response, status, Request
 from typing import List
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from otel.metrics import request_counter
 
 # ================================
 #  CONFIGURAÇÃO DA APLICAÇÃO
@@ -21,6 +22,7 @@ app = FastAPI()
 
 @app.get("/")
 def read_root():
+    request_counter.add(1, {"service": APP_NAME, "endpoint": "/"})
     return {"message": f"Esse é o serviço {APP_NAME}"}
 
 @app.get("/metrics")
@@ -33,7 +35,7 @@ def process_request(payload: List[str], response: Response, request: Request):
     Endpoint que processa um payload, simula falhas e latência variável,
     e propaga a requisição para outros serviços.
     """
-
+    request_counter.add(1, {"service": APP_NAME, "endpoint": "/process"})
     original_payload = payload.copy()
     original_payload.append(APP_NAME)
 
