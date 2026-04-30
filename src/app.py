@@ -5,7 +5,7 @@ import requests
 from fastapi import FastAPI, Response, status, Request
 from typing import List
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-from otel.metrics import request_counter
+from otel.metrics import request_counter, active_requests_gauge, response_time_histogram
 
 # ================================
 #  CONFIGURAÇÃO DA APLICAÇÃO
@@ -22,6 +22,9 @@ app = FastAPI()
 
 @app.get("/")
 def read_root():
+    start_time = time.time()  # Início da medição de tempo
+    elapsed_time = time.time() - start_time  # Fim da medição de tempo
+    active_requests_gauge.set(1, {"service": APP_NAME, "endpoint": "/"})  # Incrementa o gauge para indicar uma requisição ativa
     request_counter.add(1, {"service": APP_NAME, "endpoint": "/"})
     return {"message": f"Esse é o serviço {APP_NAME}"}
 
@@ -31,10 +34,15 @@ def metrics():
 
 @app.post("/process")
 def process_request(payload: List[str], response: Response, request: Request):
+
+    start_time = time.time()  # Início da medição de tempo
     """
     Endpoint que processa um payload, simula falhas e latência variável,
     e propaga a requisição para outros serviços.
     """
+
+    active_requests_gauge.set(10, {"service": APP_NAME, "endpoint": "/process"})
+
     request_counter.add(1, {"service": APP_NAME, "endpoint": "/process"})
     original_payload = payload.copy()
     original_payload.append(APP_NAME)
@@ -70,5 +78,7 @@ def process_request(payload: List[str], response: Response, request: Request):
             except requests.RequestException as e:
                 response.status_code = status.HTTP_400_BAD_REQUEST
                 return {"error": f"Falha na requisição para {url}: {str(e)}"}
+    elapsed_time = time.time() - start_time  # Fim da medição de tempo
+    response_time_histogram.record(elapsed_time, {"service": APP_NAME, "endpoint": "/process"})  # Registra o tempo de resposta no histograma:
 
     return original_payload
